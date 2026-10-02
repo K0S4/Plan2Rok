@@ -256,7 +256,7 @@
         </div>
         
         <div class="footer-disclaimer">
-            ⚠️ Aplikacja studencka o charakterze pomocniczym. Zawsze weryfikuj ewentualne zmiany sal i godzin z oficjalnym planem UJCM.
+            ⚠️ Aplikacja studencka o charakterze pomocniczym. Zawsze weryfikuj ewentualne zmiany sal i godzin w oficjalnym systemie UJCM.
         </div>
     </div>
 
@@ -16816,7 +16816,6 @@
   }
 ]
         ;
-       
         
         
         // Zależność grup arabskich do rzymskich na UJCM
@@ -16833,7 +16832,7 @@
             '19': 'X',  '20': 'X'
         };
 
-        // Tablica pomagająca w odpowiednim sortowaniu rzymskich numerów (żeby IX nie było przed V)
+        // Tablica pomagająca w odpowiednim sortowaniu rzymskich numerów
         const romanSortOrder = {
             'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5, 
             'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10
@@ -16846,17 +16845,29 @@
                     .map(item => String(item.Grupa_Pojedyncza).trim())
             )];
 
-            // Właściwe sortowanie rzymskich i arabskich
+            // Sortowanie z uwzględnieniem polskich znaków (żeby Ł było po L) oraz liczb rzymskich
             if (categoryName === 'Lektorat (Angielski)' || categoryName === 'Rzymskie (Seminaryjne)') {
                 groups.sort((a, b) => (romanSortOrder[a] || 99) - (romanSortOrder[b] || 99));
             } else {
-                groups.sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
+                groups.sort((a, b) => a.localeCompare(b, 'pl', {numeric: true, sensitivity: 'base'}));
             }
 
             groups.forEach(g => {
                 const opt = document.createElement('option');
                 opt.value = g;
-                opt.textContent = "Grupa " + g;
+                
+                // Modyfikacja nazw, aby unikać konfliktów wizualnych
+                let label = "Grupa " + g;
+                if (categoryName === 'Literowe (Praktyczne)') {
+                    label = "Pracownia " + g;
+                    if (g === 'I') label += " (litera)";
+                } else if (categoryName === 'Lektorat (Angielski)') {
+                    label = "Angielski " + g;
+                } else if (categoryName === 'Arabskie (Kliniczne)') {
+                    label = "Kliniczna " + g;
+                }
+                
+                opt.textContent = label;
                 select.appendChild(opt);
             });
         }
@@ -16873,7 +16884,7 @@
             selects.forEach(sel => sel.addEventListener('change', updateSchedule));
         }
 
-        // Naprawa sortowania godzin (np. żeby 7:15 było zawsze przed 10:15)
+        // Naprawa sortowania godzin
         function parseTime(timeStr) {
             const match = timeStr.match(/(\d{1,2})[:.](\d{2})/);
             if (match) {
@@ -16903,12 +16914,10 @@
                 const cat = item.Kategoria;
                 const grp = String(item.Grupa_Pojedyncza).trim();
 
-                // Wykłady główne i zajęcia grupy klinicznej/seminaryjnej
                 if (cat === 'Cały rok') return true;
                 if (cat === 'Arabskie (Kliniczne)' && grp === selectedKliniczne) return true;
                 if (cat === 'Rzymskie (Seminaryjne)' && grp === derivedRoman) return true;
 
-                // Moduły do wyboru i niezależne
                 if (cat === 'Telemedycyna (T)' && grp === selectedTelemedycyna) return true;
                 if (cat === 'Język Migowy (M)' && grp === selectedMigowy) return true;
                 if (cat === 'Literowe (Praktyczne)' && grp === selectedPraktyczne) return true;
@@ -16929,10 +16938,8 @@
             });
 
             Object.keys(byDate).sort().forEach(date => {
-                // SORTOWANIE CHRONOLOGICZNE W OBRĘBIE DNIA!
                 byDate[date].sort((a, b) => parseTime(a.Godziny) - parseTime(b.Godziny));
                 
-                // Formatyzacja daty na ładny polski (np. Poniedziałek, 12 października)
                 let displayDate = date;
                 try {
                     const dateObj = new Date(date);
@@ -16952,24 +16959,39 @@
                     const cleanTeacher = cls.Prowadzacy ? String(cls.Prowadzacy).replace(/\n/g, ' ') : '';
                     const cleanForm = cls.Forma ? String(cls.Forma).replace(/\n/g, ' ') : '';
                     
-                    // Rozpoznawanie motywu kolorystycznego na bazie Kategorii UJCM
                     const cat = String(cls.Kategoria).trim();
                     let cardThemeClass = 'card-grupa';
                     let badgeThemeClass = 'badge-grupa';
+                    let groupLabelText = `Grupa ${cls.Grupa}`;
                     
+                    // Dobieranie styli i precyzyjnych nazw plakietek do kategorii
                     if (cat === 'Cały rok') {
-                        cardThemeClass = 'card-caly-rok'; badgeThemeClass = 'badge-caly-rok';
+                        cardThemeClass = 'card-caly-rok'; 
+                        badgeThemeClass = 'badge-caly-rok';
+                        groupLabelText = '👥 Cały rok';
                     } else if (cat === 'Telemedycyna (T)') {
-                        cardThemeClass = 'card-tele'; badgeThemeClass = 'badge-tele';
+                        cardThemeClass = 'card-tele'; 
+                        badgeThemeClass = 'badge-tele';
+                        groupLabelText = `💻 Telemed. ${cls.Grupa}`;
                     } else if (cat === 'Język Migowy (M)') {
-                        cardThemeClass = 'card-migowy'; badgeThemeClass = 'badge-migowy';
+                        cardThemeClass = 'card-migowy'; 
+                        badgeThemeClass = 'badge-migowy';
+                        groupLabelText = `🧏 Migowy ${cls.Grupa}`;
                     } else if (cat === 'Literowe (Praktyczne)') {
-                        cardThemeClass = 'card-praktyczne'; badgeThemeClass = 'badge-praktyczne';
+                        cardThemeClass = 'card-praktyczne'; 
+                        badgeThemeClass = 'badge-praktyczne';
+                        groupLabelText = `🔬 Pracownia ${cls.Grupa}`;
+                        if (cls.Grupa === 'I') groupLabelText += ' (litera)'; // Zabezpieczenie przed błędem I/I na froncie karty
                     } else if (cat === 'Lektorat (Angielski)') {
-                        cardThemeClass = 'card-lektorat'; badgeThemeClass = 'badge-lektorat';
+                        cardThemeClass = 'card-lektorat'; 
+                        badgeThemeClass = 'badge-lektorat';
+                        groupLabelText = `🇬🇧 Angielski ${cls.Grupa}`;
+                    } else {
+                        // Kliniczne i Seminaryjne UJCM
+                        cardThemeClass = 'card-grupa'; 
+                        badgeThemeClass = 'badge-grupa';
+                        groupLabelText = `🏥 Grupa ${cls.Grupa}`;
                     }
-                    
-                    const groupLabelText = cat === 'Cały rok' ? '👥 Cały rok' : `👥 Grupa ${cls.Grupa}`;
 
                     scheduleDiv.innerHTML += `
                         <div class="class-card ${cardThemeClass}">
