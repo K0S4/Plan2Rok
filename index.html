@@ -256,11 +256,12 @@
         </div>
         
         <div class="footer-disclaimer">
-            ⚠️ Aplikacja studencka o charakterze pomocniczym. Zawsze weryfikuj ewentualne zmiany sal i godzin w oficjalnym planie UJCM.
+            ⚠️ Aplikacja studencka o charakterze pomocniczym. Zawsze weryfikuj ewentualne zmiany sal i godzin z oficjalnym planem UJCM.
         </div>
     </div>
 
     <script>
+
         const data = 
         [
   {
@@ -16815,6 +16816,7 @@
   }
 ]
         ;
+       
         
         
         // Zależność grup arabskich do rzymskich na UJCM
@@ -16831,12 +16833,25 @@
             '19': 'X',  '20': 'X'
         };
 
+        // Tablica pomagająca w odpowiednim sortowaniu rzymskich numerów (żeby IX nie było przed V)
+        const romanSortOrder = {
+            'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5, 
+            'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10
+        };
+
         function populateSelect(elementId, categoryName) {
             const select = document.getElementById(elementId);
-            const groups = [...new Set(
+            let groups = [...new Set(
                 data.filter(item => item.Kategoria === categoryName)
                     .map(item => String(item.Grupa_Pojedyncza).trim())
-            )].sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
+            )];
+
+            // Właściwe sortowanie rzymskich i arabskich
+            if (categoryName === 'Lektorat (Angielski)' || categoryName === 'Rzymskie (Seminaryjne)') {
+                groups.sort((a, b) => (romanSortOrder[a] || 99) - (romanSortOrder[b] || 99));
+            } else {
+                groups.sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
+            }
 
             groups.forEach(g => {
                 const opt = document.createElement('option');
